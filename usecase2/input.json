@@ -1,0 +1,22 @@
+[
+    {
+        "Name": "Dealer 1",
+        "Street": "Road 1",
+        "City": "City1"
+    },
+    {
+        "Name": "Dealer 1",
+        "Street": "Road 2",
+        "City": "City2"
+    },
+    {
+        "Name": "Dealer 3",
+        "Street": "Road 3",
+        "City": "City3"
+    },
+    {
+        "Name": "Dealer 4",
+        "Street": "Road 4",
+        "City": "City4"
+    }
+]
