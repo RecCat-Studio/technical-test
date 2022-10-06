@@ -7,11 +7,11 @@ dealerGenerator.once('start', () => {
 });
 
 dealerGenerator.on('genereted', (nbDealersGenereted) => {
-	//console.log(`${nbDealersGenereted} dealers generated`);
+    //console.log(`${nbDealersGenereted} dealers generated`);
 });
 
 dealerGenerator.on('saved', (nbDealersSaved) => {
-	console.log(`${nbDealersSaved} dealers saved`);
+    console.log(`${nbDealersSaved} dealers saved`);
 });
 
 dealerGenerator.on('end', (nb) => {
@@ -19,23 +19,21 @@ dealerGenerator.on('end', (nb) => {
     console.log(`${nb} dealer generated`);
 });
 
-async function main() {
-    
-    const dbs = await dealerGenerator.createDbs();
+dealerGenerator.on('ready', (key, db) => {
+    console.log(`${key} is ready`);
 
-    const purgeDealers = await dealerGenerator.removeAllDealers(dbs[0]);
-    
+    if (!dealerGenerator.init) {
+        dealerGenerator.dropDealersCollection();
+    }
 
-    dealerGenerator.prepareAndPushToInsertIntoDB(dbs);
-
-
-	return 'done.';
-}
-
-
-main()
-  .then(console.log)
-  .catch(console.error)
-  .finally(() => {
-
+    dealerGenerator.prepareAndInsertDealers(key, db);
 });
+
+dealerGenerator.on('working', (key) => {
+    console.log(`${key} working`);
+});
+
+
+(async () => {
+	await dealerGenerator.createDbs();
+})();

@@ -18,8 +18,10 @@ class DealerGenerator extends EventEmitter {
 	constructor() {
 		super();
 		this.nbDealerGenerated = 0;
-		this.nbDealerRequested = 0;
 		this.nbDealerSaved = 0;
+		this.init = false;
+		this.readyDBs = new Map();
+		this.workingDBs = new Map();
 	}
 
 	generateDealers(nbDealersToGenerate) {
@@ -41,21 +43,25 @@ class DealerGenerator extends EventEmitter {
 		return dealers;
 	}
 
-	prepareAndPushToInsertIntoDB = async (dbs) => {
-        while (this.nbDealerGenerated < NB_INSERT) {
-            await Promise.all(dbs.map(async (db) => {
-                if (this.nbDealerGenerated < NB_INSERT) {
-
-                    const dealers = this.generateDealers(MAX_RECORDS_PER_INSERT);
-    
-                    await this.insertManyDealers(db, dealers);
-                }
-			}));	
+	prepareAndInsertDealers = async  (key, db) => {	
+		if (this.nbDealerGenerated >= NB_INSERT) {
+			this.emit('end', this.nbDealerGenerated);
+			return 
 		}
+		
+		this.workingDBs.set(key, db);
+		this.readyDBs.delete(key);
+		this.emit('working', key);
 
-        this.emit('end', this.nbDealerGenerated);
-	};
+		const dealers = this.generateDealers(MAX_RECORDS_PER_INSERT);
 
+		await this.insertManyDealers(db, dealers);
+	
+		this.readyDBs.set(key, db);
+		this.emit('ready', key, db);
+		this.workingDBs.delete(key);				
+	} 
+	
 	insertManyDealers = async (db, data) => {
 		const dealersInserted = await db.collection(DEALERS).insertMany(data);
 		this.nbDealerSaved += dealersInserted.insertedCount;
@@ -65,26 +71,41 @@ class DealerGenerator extends EventEmitter {
 		return dealersInserted;
 	};
 
-	removeAllDealers = async (db) => {
-		const dealersPurged = await db.collection(DEALERS).deleteMany({});
-		console.log('collection of dealers purged ');
+	dropDealersCollection = async () => {
+		try {
+			const iterator = this.readyDBs.entries();
+			const db = iterator.next().value;
 
-		return dealersPurged;
+			this.workingDBs.set(db[0], db[1]);
+			this.readyDBs.delete(db[0]);
+			this.emit('working', db[0]);
+			
+			const dealersCollectionDropped = await db[1].collection(DEALERS).drop();
+			this.init = true;
+			console.log('collection of dealers dropped ');
+	
+			this.readyDBs.set(db[0], db[1]);
+			this.emit('ready', db[0], db[1]);
+			this.workingDBs.delete(db[0]);
+			
+			return dealersCollectionDropped;
+		} catch (error) {
+			console.log(error);
+		}
 	};
 
 	createDbs = async () => {
-		const dbs = [];
-
-		for (let i = 1; i <= 4; i++) {
+		for (let key = 1; key <= 4; key++) {
 			const client = new MongoClient(url);
 			await client.connect();
-			console.log(`Client ${i} connected successfully to server`);
+			console.log(`Client ${key} connected successfully to server`);
 
 			const db = client.db(dbName);
-			dbs.push(db);
+			this.readyDBs.set(`client${key}`, db);
+			this.emit('ready', `client${key}`, db);
 		}
 
-		return dbs;
+		return this.readyDBs;
 	};
 }
 

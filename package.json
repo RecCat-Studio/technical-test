@@ -2,7 +2,7 @@
   "name": "technical-test",
   "version": "1.0.0",
   "scripts": {
-    "start:usecase1": "nodemon ./usecase1/usecase1.js",
+    "start:usecase1": "node ./usecase1/usecase1.js",
     "start:usecase2": "node ./usecase2/usecase2.js"
   },
   "main": "index.js",
