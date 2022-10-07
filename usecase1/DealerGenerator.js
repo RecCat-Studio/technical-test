@@ -12,6 +12,7 @@ const DEALERS = 'dealers';
 
 const NB_INSERT = 1000000000;
 const MAX_RECORDS_PER_INSERT = 2000;
+const NUMBER_OF_MONGO_CLIENT = 4;
 
 
 class DealerGenerator extends EventEmitter {
@@ -19,7 +20,6 @@ class DealerGenerator extends EventEmitter {
 		super();
 		this.nbDealerGenerated = 0;
 		this.nbDealerSaved = 0;
-		this.init = false;
 		this.readyDBs = new Map();
 		this.workingDBs = new Map();
 	}
@@ -76,37 +76,34 @@ class DealerGenerator extends EventEmitter {
 			const iterator = this.readyDBs.entries();
 			const db = iterator.next().value;
 
-			this.workingDBs.set(db[0], db[1]);
-			this.readyDBs.delete(db[0]);
-			this.emit('working', db[0]);
-			
 			const dealersCollectionDropped = await db[1].collection(DEALERS).drop();
 			this.init = true;
 			console.log('collection of dealers dropped ');
 	
-			this.readyDBs.set(db[0], db[1]);
-			this.emit('ready', db[0], db[1]);
-			this.workingDBs.delete(db[0]);
-			
 			return dealersCollectionDropped;
 		} catch (error) {
-			console.log(error);
+			console.log('collection not exist');
 		}
 	};
 
 	createDbs = async () => {
-		for (let key = 1; key <= 4; key++) {
+		for (let key = 1; key <= NUMBER_OF_MONGO_CLIENT; key++) {
 			const client = new MongoClient(url);
 			await client.connect();
 			console.log(`Client ${key} connected successfully to server`);
 
 			const db = client.db(dbName);
-			this.readyDBs.set(`client${key}`, db);
-			this.emit('ready', `client${key}`, db);
+			this.readyDBs.set(`client${key}`, db);	
 		}
-
-		return this.readyDBs;
 	};
+
+	start = async () =>{
+		const emitIsReady = (value, key) => {
+			this.emit('ready', key, value);
+		}; 
+
+		this.readyDBs.forEach(emitIsReady);
+	}
 }
 
 module.exports = DealerGenerator;

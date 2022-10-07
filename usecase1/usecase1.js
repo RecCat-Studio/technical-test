@@ -14,18 +14,13 @@ dealerGenerator.on('saved', (nbDealersSaved) => {
     console.log(`${nbDealersSaved} dealers saved`);
 });
 
-dealerGenerator.on('end', (nb) => {
+dealerGenerator.once('end', (nb) => {
     console.log('dealers generation completed successfully!');
     console.log(`${nb} dealer generated`);
 });
 
 dealerGenerator.on('ready', (key, db) => {
     console.log(`${key} is ready`);
-
-    if (!dealerGenerator.init) {
-        dealerGenerator.dropDealersCollection();
-    }
-
     dealerGenerator.prepareAndInsertDealers(key, db);
 });
 
@@ -36,4 +31,6 @@ dealerGenerator.on('working', (key) => {
 
 (async () => {
 	await dealerGenerator.createDbs();
+    await dealerGenerator.dropDealersCollection();
+    dealerGenerator.start();
 })();
